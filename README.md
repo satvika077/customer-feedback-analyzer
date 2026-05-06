@@ -1,10 +1,15 @@
 # Customer Feedback Analyzer
 
-A clean, end-to-end ML project that analyzes customer feedback and returns:
-- **Sentiment** — positive, negative, or neutral (via TextBlob)
-- **Summary** — a concise 1–2 sentence summary (via Claude LLM)
+A small ML project I built to practice working with NLP pipelines and LLM APIs. It takes in customer reviews or comments and outputs two things — the sentiment (positive, negative, or neutral) and a short summary of the key points.
 
-Built as a practical ML internship demo: clean code, simple pipeline, real LLM integration.
+---
+
+## What it does
+
+- Cleans and preprocesses raw text input
+- Runs sentiment analysis using TextBlob (polarity scoring)
+- Calls the Claude API to generate a 1–2 sentence summary
+- Exposes everything through a simple FastAPI endpoint
 
 ---
 
@@ -13,14 +18,14 @@ Built as a practical ML internship demo: clean code, simple pipeline, real LLM i
 ```
 project/
 ├── data/
-│   ├── feedback.csv       # Sample customer feedback dataset
-│   └── results.json       # Output after running the pipeline
+│   ├── feedback.csv       # sample reviews I used for testing
+│   └── results.json       # output from running the batch pipeline
 ├── src/
-│   ├── main.py            # End-to-end pipeline (batch mode)
-│   ├── preprocess.py      # Text cleaning utilities
-│   ├── model.py           # Sentiment analysis (TextBlob)
-│   ├── llm_utils.py       # LLM summarization (Anthropic Claude)
-│   └── api.py             # FastAPI app with /analyze endpoint
+│   ├── main.py            # runs the full pipeline on the CSV
+│   ├── preprocess.py      # text cleaning (lowercase, strip punctuation, etc.)
+│   ├── model.py           # sentiment analysis logic
+│   ├── llm_utils.py       # Claude API call for summarization
+│   └── api.py             # FastAPI app with the /analyze endpoint
 ├── requirements.txt
 └── README.md
 ```
@@ -29,13 +34,14 @@ project/
 
 ## Setup
 
-### 1. Clone / download the project
+**1. Clone the repo and go into the folder**
 
 ```bash
-cd project
+git clone https://github.com/YOUR_USERNAME/customer-feedback-analyzer.git
+cd customer-feedback-analyzer
 ```
 
-### 2. Create a virtual environment
+**2. Create a virtual environment**
 
 ```bash
 python -m venv venv
@@ -43,60 +49,52 @@ source venv/bin/activate        # macOS/Linux
 venv\Scripts\activate           # Windows
 ```
 
-### 3. Install dependencies
+**3. Install dependencies**
 
 ```bash
 pip install -r requirements.txt
-python -m textblob.download_corpora   # Download TextBlob data
+python -m textblob.download_corpora
 ```
 
-### 4. Set your Anthropic API key
+**4. Add your Anthropic API key**
 
-Create a `.env` file or export directly:
+Create a `.env` file in the root folder:
+
+```
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+Or just export it directly in your terminal:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Or create a `.env` file:
-```
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
 ---
 
-## How to Run
+## Running it
 
-### Option A — Batch Pipeline (CSV → JSON results)
+**Option A — batch mode (processes the whole CSV)**
 
 ```bash
 python src/main.py
 ```
 
-Processes all rows in `data/feedback.csv` and saves output to `data/results.json`.
+Reads from `data/feedback.csv` and saves results to `data/results.json`.
 
-### Option B — FastAPI Server
+**Option B — API mode**
 
 ```bash
 uvicorn src.api:app --reload
 ```
 
-Server runs at `http://127.0.0.1:8000`
-
-Interactive API docs: `http://127.0.0.1:8000/docs`
+Runs at `http://127.0.0.1:8000`. You can also open `http://127.0.0.1:8000/docs` for the interactive Swagger UI.
 
 ---
 
-## API Usage
+## API
 
-### Endpoint
-
-```
-POST /analyze
-Content-Type: application/json
-```
-
-### Request body
+**POST** `/analyze`
 
 ```json
 {
@@ -104,7 +102,7 @@ Content-Type: application/json
 }
 ```
 
-### Response
+**Response:**
 
 ```json
 {
@@ -116,7 +114,7 @@ Content-Type: application/json
 }
 ```
 
-### cURL example
+**cURL example:**
 
 ```bash
 curl -X POST http://127.0.0.1:8000/analyze \
@@ -124,49 +122,41 @@ curl -X POST http://127.0.0.1:8000/analyze \
   -d '{"text": "Terrible product, broke after one use. Very disappointed."}'
 ```
 
-### Example outputs
+**A few more examples:**
 
-| Input | Sentiment | Score | Summary |
-|-------|-----------|-------|---------|
-| "Amazing product, super fast shipping!" | positive | 0.625 | The customer is highly satisfied with both the product and delivery speed. |
-| "Broke after one day. Waste of money." | negative | -0.45 | The customer reports product failure and considers the purchase a poor value. |
-| "It works fine, nothing special." | neutral | 0.05 | The customer finds the product acceptable but unremarkable. |
-
----
-
-## How It Works
-
-```
-Raw Text
-   │
-   ▼
-preprocess.py  →  Lowercase, remove punctuation, strip whitespace
-   │
-   ▼
-model.py       →  TextBlob polarity score → sentiment label + confidence
-   │
-   ▼
-llm_utils.py   →  Claude API prompt → 1-2 sentence summary
-   │
-   ▼
-Output: { sentiment, score, confidence, summary }
-```
-
-### Why TextBlob for sentiment?
-- Zero setup, no GPU, no training data needed
-- Good enough accuracy for common feedback patterns
-- Transparent and debuggable (polarity score is human-readable)
-
-### Why Claude for summarization?
-- Handles nuanced language far better than extractive approaches
-- One simple prompt, minimal token usage (Haiku model)
-- Easy to swap for any other LLM provider
+| Input | Sentiment | Score |
+|-------|-----------|-------|
+| "Amazing product, super fast shipping!" | positive | 0.625 |
+| "Broke after one day. Waste of money." | negative | -0.45 |
+| "It works fine, nothing special." | neutral | 0.05 |
 
 ---
 
-## Extending This Project
+## How the pipeline works
 
-- **Swap TextBlob** → use `transformers` with `distilbert-base-uncased-finetuned-sst-2-english` for higher accuracy
-- **Add a database** → store results in SQLite with `sqlite3`
-- **Batch endpoint** → accept a list of texts in one API call
-- **Frontend** → add a simple HTML form using `Jinja2` templates
+```
+Raw text input
+      │
+      ▼
+preprocess.py  →  lowercase, remove punctuation, strip whitespace
+      │
+      ▼
+model.py       →  TextBlob polarity score → sentiment + confidence level
+      │
+      ▼
+llm_utils.py   →  Claude API → 1-2 sentence summary
+      │
+      ▼
+{ sentiment, score, confidence, summary }
+```
+
+I used TextBlob for sentiment because it's lightweight, needs no training data, and the polarity score is easy to interpret and debug. I used Claude (Haiku model) for summarization because it handles messy, informal review language really well without needing much prompt engineering.
+
+---
+
+## Things I'd improve with more time
+
+- Swap TextBlob for a fine-tuned model like `distilbert-base-uncased-finetuned-sst-2-english` for better accuracy
+- Add a `/batch` endpoint that accepts multiple reviews at once
+- Store results in a SQLite database
+- Build a simple frontend so non-technical users can use it
